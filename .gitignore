@@ -1,0 +1,15 @@
+# Windows
+Thumbs.db
+Desktop.ini
+*.url
+*.lnk
+
+# Editor
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# OS
+.DS_Store
