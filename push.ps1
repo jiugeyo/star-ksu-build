@@ -1,83 +1,45 @@
-# push.ps1 - 将 star-ksu-build 仓库推送到 GitHub (PowerShell 版)
-# 用法：在资源管理器双击运行，或在 PowerShell 中 cd 到本目录后执行 .\push.ps1
-#       若被执行策略阻止，先在当前 PowerShell 窗口运行：Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-
-$ErrorActionPreference = "Continue"   # 改为 Continue，避免 git 的 stderr 警告被当作终止异常
-
-$REPO_ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $REPO_ROOT
-
-$GITHUB_USER = "jiugeyo"
-$REPO_NAME   = "star-ksu-build"
-$REMOTE_URL  = "https://github.com/$GITHUB_USER/$REPO_NAME.git"
+$ErrorActionPreference = "Continue"
+$REPO = "jiugeyo/star-ksu-build"
+$REMOTE = "https://github.com/$REPO.git"
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " star-ksu-build  GitHub 推送脚本 (PS)" -ForegroundColor Cyan
-Write-Host " 目标仓库: $GITHUB_USER/$REPO_NAME" -ForegroundColor Cyan
+Write-Host " $REPO  GitHub 鎺ㄩ€佽剼鏈� (PS)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 1. 清理无关文件（如误入的 .url 快捷方式等）
-Get-ChildItem -Path $REPO_ROOT -Force | Where-Object {
-    $_.Name -notin @(".git", ".github", "scripts", "README.md", "push.sh", "push.ps1", ".gitignore") -and
-    -not $_.Name.StartsWith("LICENSE")
-} | ForEach-Object {
-    Write-Host "移除无关文件: $($_.Name)" -ForegroundColor Yellow
-    Remove-Item $_.FullName -Force -Recurse -ErrorAction SilentlyContinue
-}
+# 1. 娓呯悊鏃犲叧鏂囦欢
+Remove-Item -Recurse -Force anykernel -ErrorAction SilentlyContinue
+Remove-Item -Force *.url -ErrorAction SilentlyContinue
 
-# 2. 初始化/复用 git 仓库
-if (-not (Test-Path (Join-Path $REPO_ROOT ".git"))) {
-    Write-Host "初始化 git 仓库..." -ForegroundColor Green
-    git init -q
-    git branch -M main
-}
-
-# 3. 配置本仓库 Git 身份（仅本仓库，不影响全局）
-Write-Host "配置本仓库 Git 身份..." -ForegroundColor Green
+# 2. 鍒濆鍖� / 閰嶇疆
+if (-not (Test-Path .git)) { git init -q }
 git config user.email "jiugeyo@users.noreply.github.com"
 git config user.name  "jiugeyo"
 
-# 4. 提交
-Write-Host "添加文件并提交..." -ForegroundColor Green
-git add -A
-# 静默检测 HEAD：首次提交前不存在 HEAD 属正常，不输出错误
-$lastCommit = git rev-parse HEAD 2>$null
-$status = git status --porcelain
-if ($status) {
-    git commit -m "init: Xiaomi 11 Ultra SukiSU-Ultra + SUSFS build" | Out-Null
-    Write-Host "已创建提交。" -ForegroundColor Green
-} else {
-    Write-Host "工作区无变更，跳过提交。" -ForegroundColor Gray
-}
-
-# 5. 设置远端并推送
+# 3. 鍏宠仈杩滅锛堝凡鍏宠仈鍒欏拷鐣ラ敊璇級
 git remote remove origin 2>$null
-git remote add origin $REMOTE_URL
+git remote add origin $REMOTE 2>$null
 
-Write-Host ""
-Write-Host "即将推送到 $REMOTE_URL" -ForegroundColor Cyan
-Write-Host "若提示输入凭证：" -ForegroundColor White
-Write-Host "  用户名: $GITHUB_USER" -ForegroundColor White
-Write-Host "  密码:  你的 Personal Access Token (ghp_...)" -ForegroundColor White
-Write-Host ""
+# 4. 鍏堟媺鍙栬繙绔熀绾垮苟鍚堝苟锛堣В鍐� fetch first / 闈炵┖浠撳簱锛�
+Write-Host "鎷夊彇杩滅鍩虹嚎骞跺悎骞�..." -ForegroundColor Yellow
+git fetch origin 2>$null
+git pull --rebase --no-edit origin main 2>$null
 
-git push -u origin main
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host ""
-    Write-Host "推送成功！" -ForegroundColor Green
-    Write-Host "打开 https://github.com/$GITHUB_USER/$REPO_NAME 查看。" -ForegroundColor Green
-    Write-Host "然后进入 Actions 标签页，运行工作流即可开始云编译。" -ForegroundColor Green
+# 5. 鎻愪氦鏈湴鏂囦欢
+git add -A 2>$null
+$status = git status --porcelain 2>$null
+if ($status) {
+    git commit -m "init: Xiaomi 11 Ultra SukiSU-Ultra + SUSFS build" 2>$null
+    Write-Host "宸插垱寤烘彁浜ゃ€�" -ForegroundColor Green
 } else {
-    Write-Host ""
-    Write-Host "推送失败。常见原因：" -ForegroundColor Red
-    Write-Host "  1) 凭证错误：用户名填 $GITHUB_USER，密码填 ghp_ 开头的令牌。" -ForegroundColor Red
-    Write-Host "  2) 仓库已存在且非空：可先到 GitHub 删除该仓库再跑本脚本。" -ForegroundColor Red
-    Write-Host "  3) 执行策略阻止：在当前 PowerShell 窗口运行：" -ForegroundColor Red
-    Write-Host "     Set-ExecutionPolicy -Scope CurrentUser RemoteSigned" -ForegroundColor Red
-    exit 1
+    Write-Host "宸ヤ綔鍖烘棤鍙樻洿锛岃烦杩囨彁浜ゃ€�" -ForegroundColor Gray
 }
 
-Write-Host ""
-Write-Host "按任意键退出..." -ForegroundColor Gray
-[void][System.Console]::ReadKey($true)
+# 6. 鎺ㄩ€侊紙force-with-lease锛氭瘮绾� --force 瀹夊叏锛屼粎褰撹繙绔棤浠栦汉鏂版彁浜ゆ椂鎵嶈鐩栵級
+Write-Host "鍗冲皢鎺ㄩ€佸埌 $REMOTE" -ForegroundColor Yellow
+Write-Host "鍑瘉锛氱敤鎴峰悕=jiugeyo  瀵嗙爜=浣犵殑 ghp_ 浠ょ墝" -ForegroundColor Yellow
+git push --force-with-lease origin HEAD:main
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "鎺ㄩ€佹垚鍔燂紒璇锋墦寮€ https://github.com/$REPO 鏌ョ湅銆�" -ForegroundColor Green
+} else {
+    Write-Host "鎺ㄩ€佸け璐ワ紝璇锋鏌ヤ护鐗�/缃戠粶鍚庨噸璇曘€�" -ForegroundColor Red
+}

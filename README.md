@@ -1,64 +1,45 @@
 # star-ksu-build
 
-小米 11 Ultra (star) 内核集成 **SukiSU-Ultra + SUSFS** 的云端构建工程。
+Xiaomi 11 Ultra (`star`) 内核集成 **SukiSU-Ultra** (分支 `susfs-dev`，内置 SUSFS) + **AnyKernel3** 打包的 GitHub Actions 云端构建工程。
 
-- 内核源码：`MiCode/Xiaomi_Kernel_OpenSource` 分支 `star-r-oss`（Android R / SM8350）
-- SukiSU-Ultra 分支：`susfs-dev`（官方已集成 SUSFS，支持非 GKI）
-- 构建方式：GitHub Actions 云编译 → 产出 AnyKernel3 卡刷 zip
+## 一键推送到你的 GitHub（Windows / PowerShell）
 
-## 目录结构
-
-```
-.github/workflows/build-star-ksu.yml   # GitHub Actions 工作流（Actions 页面可识别）
-scripts/build_kernel.sh                # 本地/自托管 Linux 编译脚本
-push.ps1                               # Windows PowerShell 一键推送到 GitHub
-push.sh                                # Git Bash / Linux / macOS 推送脚本
-README.md
-```
-
-## 快速开始（推送到你的 GitHub）
-
-### Windows（推荐 PowerShell）
-
-1. 将本目录放到一个**不含中文/空格**的路径（如 `D:\star-ksu`）。
-2. 若首次运行 PowerShell 脚本被阻止，先以**管理员身份**打开 PowerShell 执行一次：
+1. 以**管理员身份**打开 PowerShell，解除脚本运行限制（仅首次）：
    ```powershell
    Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
    ```
-3. 双击 `push.ps1`，或在 PowerShell 中：
+2. 在 PowerShell 中进入本文件夹，运行：
    ```powershell
-   cd D:\star-ksu
    .\push.ps1
    ```
-4. 提示输入凭证时：
-   - **用户名**：你的 GitHub 用户名（如 `jiugeyo`）
-   - **密码**：填你的 Personal Access Token（`ghp_` 开头，**不是 GitHub 登录密码**）
+3. 凭证提示：**用户名 `jiugeyo`，密码填 `ghp_` 开头的 Personal Access Token**。
+4. 推送成功后打开 <https://github.com/jiugeyo/star-ksu-build> → **Actions** → 选
+   **Build Xiaomi 11 Ultra (star) Kernel with SukiSU-Ultra + SUSFS** → **Run workflow**
+   （参数默认 `kernel_branch=star-r-oss`、`susfs=true`）。
+5. 约 20–60 分钟后下载产物 `Xiaomi11Ultra-star-SukiSU-Ultra-SUSFS.zip`，
+   Recovery 卡刷 / `adb sideload` 后重启，用 SukiSU Manager 验证 SUSFS 已启用。
 
-### Git Bash / Linux / macOS
+## 本地编译（自托管 Linux）
 
 ```bash
-cd star-ksu-build
-git config user.email "you@example.com"   # 首次需配置身份
-git config user.name  "Your Name"
-bash push.sh
+sudo apt install -y bc bison cpio flex kmod libelf-dev libssl-dev libtfm-dev \
+    libzstd-dev pahole xz-utils zlib1g-dev clang llvm lld
+export KERNEL_SOURCE="https://github.com/MiCode/Xiaomi_Kernel_OpenSource"
+export KERNEL_BRANCH="star-r-oss"
+export DEVICE_NAME="star"
+bash scripts/build_kernel.sh
 ```
 
-## 触发云编译
+## 参数说明（Actions 运行界面可覆盖）
 
-推送成功后：
-
-1. 打开 `https://github.com/<你的用户名>/star-ksu-build` → **Actions**。
-2. 选择工作流 **Build Xiaomi 11 Ultra (star) Kernel with SukiSU-Ultra + SUSFS** → **Run workflow**。
-3. 参数默认 `kernel_branch=star-r-oss`、`susfs=true`，直接运行。
-4. 约 20–60 分钟后，下载产物 `Xiaomi11Ultra-star-SukiSU-Ultra-SUSFS.zip`。
-
-## 刷入与验证
-
-Recovery 卡刷 / `adb sideload Xiaomi11Ultra-star-SukiSU-Ultra-SUSFS.zip` → 重启 →
-用 **SukiSU Manager** App 查看，确认 SUSFS 状态为「已启用 / Supported」。
+| 参数 | 默认 | 说明 |
+|---|---|---|
+| `kernel_branch` | `star-r-oss` | 小米内核源码分支/tag |
+| `susfs` | `true` | 启用 SUSFS（SukiSU-Ultra susfs-dev 内置） |
+| `release` | `false` | `true` 时构建完成后自动创建 GitHub Release |
 
 ## 注意
 
-- `star-r-oss` 为 Android 11 基线。若你的 ROM（如澎湃 1.0.21.0，Android 14）刷入后异常，
-  在 workflow 运行界面把 `kernel_branch` 改为与 ROM 安全补丁月份更接近的 tag 重跑即可。
-- 刷机有变砖风险：请先备份数据、确认已解锁 Bootloader，并备好官方线刷包以便回退。
+- `star-r-oss` 为 Android 11 基线。澎湃 1.0.21.0 基于 Android 14，若刷入后异常，
+  在 workflow 运行界面把 `kernel_branch` 改为与 1.0.21.0 安全补丁月份更接近的 tag 重跑。
+- 刷机前请备份数据、确认已解锁 Bootloader，并准备好官方线刷包以便回退。
